@@ -1,0 +1,12 @@
+@media (max-width: 800px) {
+  .shell { grid-template-columns: 1fr; }
+  .nav-toggle { display: inline-block; }
+  nav {
+    display: none;
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .shell.nav-open nav { display: flex; }
+  .stats, .grid-2 { grid-template-columns: 1fr; }
+  main { padding: 1rem; }
+}

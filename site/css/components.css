@@ -1,0 +1,110 @@
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.stat strong { display: block; font-size: 1.5rem; }
+
+.row, .actions { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
+
+button, .button {
+  background: var(--surface-2);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0.45rem 0.75rem;
+  font: inherit;
+  cursor: pointer;
+}
+
+button.primary { background: var(--accent); color: var(--accent-ink); border-color: transparent; }
+
+button.danger { border-color: var(--danger); color: var(--danger); }
+
+label { display: block; font-size: 0.92rem; margin-bottom: 0.25rem; }
+
+label.button {
+  display: inline-flex;
+  width: auto;
+  margin: 0;
+  position: relative;
+}
+
+label.button input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+}
+
+input, select, textarea {
+  width: 100%;
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0.45rem 0.6rem;
+  font: inherit;
+}
+
+textarea { min-height: 7rem; font-family: var(--mono); }
+
+.field { margin-bottom: 0.75rem; }
+
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+
+.alert { color: var(--danger); }
+
+.banner { border-color: var(--warn); }
+
+.muted { color: var(--muted); }
+
+.list { display: grid; gap: 0.75rem; }
+
+.item-head { display: flex; justify-content: space-between; gap: 0.75rem; align-items: start; }
+
+.status {
+  display: inline-block;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 0.1rem 0.5rem;
+  font-family: var(--mono);
+}
+
+.status[data-tone="ok"] { color: var(--ok); border-color: var(--ok); }
+.status[data-tone="warn"] { color: var(--warn); border-color: var(--warn); }
+.status[data-tone="error"] { color: var(--danger); border-color: var(--danger); }
+
+.is-hidden { display: none; }
+
+table { width: 100%; border-collapse: collapse; }
+
+th, td {
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+  padding: 0.4rem;
+  vertical-align: top;
+}
+
+dialog {
+  width: min(32rem, calc(100% - 2rem));
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+
+dialog::backdrop { background: rgb(0 0 0 / 65%); }

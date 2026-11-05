@@ -1,0 +1,17 @@
+:root {
+  color-scheme: dark;
+  --bg: #12161c;
+  --surface: #1c232d;
+  --surface-2: #252e3a;
+  --text: #e8eef6;
+  --muted: #c5d0db;
+  --line: #3a4856;
+  --accent: #e0b15a;
+  --accent-ink: #1d1608;
+  --ok: #8fd6ae;
+  --warn: #f0c36a;
+  --danger: #ffb4ab;
+  --focus: #f2c14e;
+  --mono: ui-monospace, "Cascadia Code", "Segoe UI Mono", Consolas, monospace;
+  --sans: system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}

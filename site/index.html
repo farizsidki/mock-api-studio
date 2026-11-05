@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="dark">
+    <meta name="description" content="Browser-based API simulator. Not a backend server.">
+    <title>Mock API Studio</title>
+    <link rel="stylesheet" href="./css/tokens.css">
+    <link rel="stylesheet" href="./css/base.css">
+    <link rel="stylesheet" href="./css/layout.css">
+    <link rel="stylesheet" href="./css/components.css">
+    <link rel="stylesheet" href="./css/responsive.css">
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+    <div class="app">
+      <header class="topbar">
+        <div>
+          <p class="brand">Mock API Studio</p>
+          <p class="tagline">Browser-based API simulator. Not a backend server.</p>
+        </div>
+        <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-nav">Menu</button>
+      </header>
+      <div class="shell">
+        <nav id="site-nav" aria-label="Main">
+          <a href="#/dashboard">Dashboard</a>
+          <a href="#/endpoints">Endpoints</a>
+          <a href="#/tester">Tester</a>
+          <a href="#/collections">Collections</a>
+          <a href="#/logs">Logs</a>
+          <a href="#/docs">Docs</a>
+        </nav>
+        <main id="main" tabindex="-1"></main>
+      </div>
+    </div>
+    <script type="module" src="./js/app.js"></script>
+  </body>
+</html>
