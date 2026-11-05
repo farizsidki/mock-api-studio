@@ -6,6 +6,21 @@ import {
   validateImportDocument,
 } from "../utils/validation.js";
 
+function mergeById(current, incoming) {
+  const merged = new Map(current.map((item) => [item.id, item]));
+  for (const item of incoming) merged.set(item.id, item);
+  return [...merged.values()];
+}
+
+function mergeWorkspaces(current, incoming) {
+  return {
+    schemaVersion: 1,
+    endpoints: mergeById(current.endpoints, incoming.endpoints),
+    collections: mergeById(current.collections, incoming.collections),
+    presets: mergeById(current.presets || [], incoming.presets || []),
+  };
+}
+
 export function createImportExportService({ storageService, validator = validateImportDocument, clock }) {
   let parsed = null;
 
@@ -44,6 +59,7 @@ export function createImportExportService({ storageService, validator = validate
         exportedAt: new Date(clock()).toISOString(),
         endpoints: cloneData(workspace.endpoints),
         collections: cloneData(workspace.collections),
+        presets: cloneData(workspace.presets),
       };
     },
     validateImport(text) {
@@ -54,6 +70,7 @@ export function createImportExportService({ storageService, validator = validate
           summary: {
             endpoints: workspace.endpoints.length,
             collections: workspace.collections.length,
+            presets: workspace.presets.length,
           },
         };
       } catch (error) {
@@ -64,16 +81,24 @@ export function createImportExportService({ storageService, validator = validate
       }
     },
     importWorkspace(text, options = {}) {
-      if (options.strategy !== "replace") {
+      if (options.strategy !== "replace" && options.strategy !== "merge") {
         throw createDomainError({
           code: "IMPORT_INVALID",
           message: "Only replace strategy is supported",
           status: 422,
         });
       }
-      const workspace = parsed && parsed.text === text ? parsed.workspace : parseImport(text);
+      const incoming = parsed && parsed.text === text ? parsed.workspace : parseImport(text);
       parsed = null;
-      storageService.saveWorkspace(workspace);
+      const workspace = options.strategy === "merge" ? mergeWorkspaces(storageService.loadWorkspace(), incoming) : incoming;
+      try {
+        storageService.saveWorkspace(workspace);
+      } catch (error) {
+        if (isDomainError(error) && error.code !== "STORAGE_WRITE_FAILED" && error.code !== "STORAGE_UNAVAILABLE") {
+          throw createDomainError({ code: "IMPORT_INVALID", message: error.message, status: 422 });
+        }
+        throw error;
+      }
       return {
         endpoints: workspace.endpoints.length,
         collections: workspace.collections.length,

@@ -51,6 +51,8 @@ export function createLogsView(deps) {
           el("div", { className: "grid-2", children: [field("Method", method), field("Status", status)] }),
           el("div", { className: "actions", children: [
             el("button", { className: "primary", text: "Apply filter", attrs: { type: "submit" } }),
+            el("button", { text: "Export JSON", attrs: { type: "button" }, on: { click: () => downloadLogs(deps, "json") } }),
+            el("button", { text: "Export text", attrs: { type: "button" }, on: { click: () => downloadLogs(deps, "text") } }),
             el("button", { text: "Clear Logs", attrs: { type: "button" }, on: { click: async () => {
               const yes = await confirmDialog({ title: "Clear logs", text: "Remove all session logs?", confirmLabel: "Clear Logs" });
               if (!yes) return;
@@ -65,4 +67,15 @@ export function createLogsView(deps) {
     },
     unmount() {},
   };
+}
+
+function downloadLogs(deps, format) {
+  const text = deps.logger.exportLogs(format);
+  const fileName = format === "json" ? "mock-api-studio-logs.json" : "mock-api-studio-logs.txt";
+  const url = URL.createObjectURL(new Blob([text], { type: format === "json" ? "application/json" : "text/plain" }));
+  const link = el("a", { attrs: { href: url, download: fileName } });
+  document.body.append(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
 }

@@ -61,6 +61,24 @@ test("json body parsing treats blank text as absent", () => {
   assert.equal(parseJsonBody("{").error.code, "BAD_JSON");
 });
 
+test("required field on an empty body is a validation error", () => {
+  const endpoint = {
+    bodyRules: [{ field: "name", type: "string", required: true }],
+    handler: { type: "static" },
+  };
+  const result = validateRequest({ endpoint, body: undefined });
+  assert.equal(result.ok, false);
+  assert.equal(result.error.code, "VALIDATION_ERROR");
+  assert.equal(result.error.message, "Field name is required");
+  const wrong = validateRequest({ endpoint, body: { name: 1 } });
+  assert.equal(wrong.error.message, "Field name must be a string");
+  const textNumber = validateRequest({
+    endpoint: { bodyRules: [{ field: "age", type: "number", required: true }], handler: { type: "static" } },
+    body: { age: "1" },
+  });
+  assert.equal(textNumber.ok, false);
+});
+
 test("collection writes require an object body and static requests do not", () => {
   const create = endpoint(null, { type: "collection", operation: "create" });
   assert.equal(validateRequest({ endpoint: create, body: undefined, query: new URLSearchParams() }).ok, false);

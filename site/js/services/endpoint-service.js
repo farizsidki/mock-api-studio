@@ -1,8 +1,29 @@
+import { routesConflict } from "../core/route-matcher.js";
 import { cloneData } from "../utils/json.js";
 import { createDomainError, validateEndpointInput } from "../utils/validation.js";
 
 function notFound() {
   return createDomainError({ code: "NOT_FOUND", message: "Endpoint was not found", status: 404 });
+}
+
+function copyPath(path, attempt) {
+  const suffix = attempt === 1 ? "-copy" : `-copy-${attempt}`;
+  const segments = path.split("/").slice(1);
+  const paramAt = segments.findIndex((segment) => segment.startsWith(":"));
+  if (paramAt === -1) return `${path}${suffix}`;
+  if (paramAt === 0) return `/${suffix.slice(1)}/${segments.join("/")}`;
+  const next = segments.slice();
+  next[paramAt - 1] = `${segments[paramAt - 1]}${suffix}`;
+  return `/${next.join("/")}`;
+}
+
+function nextCopyPath(path, method, endpoints) {
+  for (let attempt = 1; attempt < 100; attempt += 1) {
+    const candidate = copyPath(path, attempt);
+    const taken = endpoints.some((endpoint) => endpoint.method === method && routesConflict(endpoint.path, candidate));
+    if (!taken) return candidate;
+  }
+  throw createDomainError({ code: "CONFLICT", message: "No available duplicate path", status: 409 });
 }
 
 export function createEndpointService({ storageService, idGenerator }) {
@@ -43,6 +64,19 @@ export function createEndpointService({ storageService, idGenerator }) {
       workspace.endpoints[index] = endpoint;
       storageService.saveWorkspace(workspace);
       return cloneData(endpoint);
+    },
+    duplicate(id) {
+      const workspace = storageService.loadWorkspace();
+      const source = workspace.endpoints.find((endpoint) => endpoint.id === id);
+      if (!source) throw notFound();
+      const path = nextCopyPath(source.path, source.method, workspace.endpoints);
+      const copy = cloneData(source);
+      copy.id = idGenerator();
+      copy.name = `${source.name} copy`;
+      copy.path = path;
+      workspace.endpoints.push(copy);
+      storageService.saveWorkspace(workspace);
+      return cloneData(copy);
     },
     remove(id) {
       const workspace = storageService.loadWorkspace();

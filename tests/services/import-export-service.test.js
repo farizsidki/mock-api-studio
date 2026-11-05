@@ -49,7 +49,7 @@ test("export and replace import round-trip workspace data", () => {
   assert.equal(exported.exportedAt, "2026-01-01T00:00:00.000Z");
   assert.equal(Object.hasOwn(exported, "logs"), false);
   const preview = service.validateImport(documentFor({ endpoints: [], collections: [] }));
-  assert.deepEqual(preview, { ok: true, summary: { endpoints: 0, collections: 0 } });
+  assert.deepEqual(preview, { ok: true, summary: { endpoints: 0, collections: 0, presets: 0 } });
   service.importWorkspace(documentFor({ endpoints: [], collections: [] }), { strategy: "replace" });
   assert.equal(storageService.loadWorkspace().collections.length, 0);
   service.importWorkspace(JSON.stringify(exported), { strategy: "replace" });
@@ -71,7 +71,7 @@ test("invalid import does not replace the saved workspace", () => {
   );
   assert.deepEqual(storageService.loadWorkspace(), before);
   assert.throws(
-    () => service.importWorkspace(documentFor({ endpoints: [], collections: [] }), { strategy: "merge" }),
+    () => service.importWorkspace(documentFor({ endpoints: [], collections: [] }), { strategy: "append" }),
     (error) => error.code === "IMPORT_INVALID",
   );
 });
@@ -91,6 +91,49 @@ test("validate then import parses the same text once", () => {
   assert.equal(service.validateImport(text).ok, true);
   service.importWorkspace(text, { strategy: "replace" });
   assert.equal(calls, 1);
+});
+
+function endpoint(id, path) {
+  return {
+    id,
+    name: path,
+    method: "GET",
+    path,
+    enabled: true,
+    delayMs: 0,
+    handler: { type: "static", response: { status: 200, headers: {}, body: null } },
+  };
+}
+
+test("merge keeps the current endpoint when the file adds another", () => {
+  const { service, storageService } = setup({
+    schemaVersion: 1,
+    endpoints: [endpoint("ep_users", "/users")],
+    collections: [],
+  });
+  service.importWorkspace(documentFor({
+    endpoints: [endpoint("ep_posts", "/posts")],
+    collections: [],
+  }), { strategy: "merge" });
+  const paths = storageService.loadWorkspace().endpoints.map((item) => item.path).sort();
+  assert.deepEqual(paths, ["/posts", "/users"]);
+});
+
+test("merge conflict does not remove the saved workspace", () => {
+  const { service, storageService } = setup({
+    schemaVersion: 1,
+    endpoints: [endpoint("ep_users", "/users"), endpoint("ep_posts", "/posts")],
+    collections: [],
+  });
+  const before = storageService.loadWorkspace();
+  assert.throws(
+    () => service.importWorkspace(documentFor({
+      endpoints: [endpoint("ep_other", "/users")],
+      collections: [],
+    }), { strategy: "merge" }),
+    (error) => error.code === "IMPORT_INVALID" && error.message.includes("conflict"),
+  );
+  assert.deepEqual(storageService.loadWorkspace().endpoints.map((item) => item.id), before.endpoints.map((item) => item.id));
 });
 
 test("oversized import is rejected from the byte length", () => {

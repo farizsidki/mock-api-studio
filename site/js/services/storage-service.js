@@ -10,7 +10,7 @@ export function createStorageService({ storage, key }) {
   let cache = null;
 
   function emptyWorkspace() {
-    return { schemaVersion: 1, endpoints: [], collections: [] };
+    return { schemaVersion: 1, endpoints: [], collections: [], presets: [] };
   }
 
   function readRaw() {

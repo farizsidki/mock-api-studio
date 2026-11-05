@@ -1,3 +1,4 @@
+import { findHistoryEntry } from "../core/request-history.js";
 import { createHeaderFields, el, field, setAlert, statusTone } from "../utils/dom.js";
 import { prettyJson } from "../utils/json.js";
 
@@ -25,6 +26,34 @@ export function createTesterView(deps) {
         if (!endpoint) return;
         method.value = endpoint.method;
         url.value = endpoint.path;
+        showScenarios(endpoint);
+      });
+      const scenario = el("select");
+      scenario.append(el("option", { text: "Default response", attrs: { value: "" } }));
+      function showScenarios(endpoint) {
+        scenario.replaceChildren(el("option", { text: "Default response", attrs: { value: "" } }));
+        for (const item of endpoint?.handler?.scenarios || []) {
+          scenario.append(el("option", { text: item.name, attrs: { value: item.id } }));
+        }
+      }
+      const recent = el("select");
+      function refreshHistory() {
+        const selected = recent.value;
+        recent.replaceChildren(el("option", { text: "Recent requests", attrs: { value: "" } }));
+        if (!deps.requestHistory) return;
+        for (const entry of deps.requestHistory.list()) {
+          recent.append(el("option", { text: `${entry.method} ${entry.url}`, attrs: { value: entry.id } }));
+        }
+        recent.value = [...recent.options].some((option) => option.value === selected) ? selected : "";
+      }
+      refreshHistory();
+      recent.addEventListener("change", () => {
+        const entry = findHistoryEntry(deps.requestHistory.list(), recent.value);
+        if (!entry) return;
+        method.value = entry.method;
+        url.value = entry.url;
+        body.value = entry.bodyText;
+        headers.load(entry.headers);
       });
       const headers = createHeaderFields();
       const body = el("textarea");
@@ -41,12 +70,16 @@ export function createTesterView(deps) {
           send.disabled = true;
           send.textContent = "Sending...";
           result.setAttribute("aria-busy", "true");
-          last = await deps.engine.simulateRequest({
+          const request = {
             method: method.value,
             url: url.value,
             headers: headerValues,
             bodyText: body.value,
-          });
+            scenarioId: scenario.value || undefined,
+          };
+          last = await deps.engine.simulateRequest(request);
+          deps.requestHistory?.add(request);
+          refreshHistory();
           setAlert(alert, "");
           draw(last);
           copy.disabled = false;
@@ -105,12 +138,66 @@ export function createTesterView(deps) {
         ] }));
       }
 
+      const presetName = el("input", { attrs: { type: "text", placeholder: "Preset name" } });
+      const presetSelect = el("select");
+      function refreshPresets() {
+        presetSelect.replaceChildren(el("option", { text: "Presets", attrs: { value: "" } }));
+        for (const preset of deps.presetService?.list() || []) {
+          presetSelect.append(el("option", { text: preset.name, attrs: { value: preset.id } }));
+        }
+      }
+      function applyPreset(preset) {
+        method.value = preset.method;
+        url.value = preset.url;
+        body.value = preset.bodyText;
+        headers.load(preset.headers);
+      }
+      refreshPresets();
+      presetSelect.addEventListener("change", () => {
+        const preset = (deps.presetService?.list() || []).find((item) => item.id === presetSelect.value);
+        if (preset) applyPreset(preset);
+      });
+      const savePreset = el("button", { text: "Save preset", attrs: { type: "button" }, on: { click: () => {
+        try {
+          deps.presetService.create({
+            name: presetName.value,
+            method: method.value,
+            url: url.value,
+            headers: headers.read(),
+            bodyText: body.value,
+          });
+          presetName.value = "";
+          setAlert(alert, "");
+          refreshPresets();
+        } catch (error) {
+          setAlert(alert, error.message || "Preset could not be saved");
+        }
+      } } });
+      const deletePreset = el("button", { text: "Delete preset", attrs: { type: "button" }, on: { click: () => {
+        if (!presetSelect.value) return;
+        deps.presetService.remove(presetSelect.value);
+        refreshPresets();
+      } } });
+
       container.append(
         el("h1", { text: "API Tester" }),
         el("p", { className: "muted", text: "Requests are simulated in this browser. Nothing is sent over the network." }),
         alert,
-        el("form", { className: "panel", on: { submit: (event) => event.preventDefault() }, children: [
+        el("form", { className: "panel", on: {
+          submit: (event) => event.preventDefault(),
+          keydown: (event) => {
+            if (event.ctrlKey && event.key === "Enter") {
+              event.preventDefault();
+              send.click();
+            }
+          },
+        }, children: [
           field("Saved endpoint", shortcut),
+          field("Scenario", scenario),
+          field("Recent requests", recent),
+          field("Preset name", presetName),
+          field("Presets", presetSelect),
+          el("div", { className: "actions", children: [savePreset, deletePreset] }),
           el("div", { className: "grid-2", children: [field("Method", method), field("Path and query", url)] }),
           field("Headers", headers.box),
           el("button", { text: "Add header", attrs: { type: "button" }, on: { click: () => headers.add() } }),

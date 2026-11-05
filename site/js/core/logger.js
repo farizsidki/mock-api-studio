@@ -24,5 +24,13 @@ export function createLogger({ maxEntries = 200, clock }) {
     clear() {
       entries.length = 0;
     },
+    exportLogs(format) {
+      const rows = this.list();
+      if (format === "json") return JSON.stringify(rows, null, 2);
+      if (format === "text") {
+        return rows.map((row) => `${row.timestamp} ${row.method} ${row.path} ${row.status} ${row.elapsedMs}ms`).join("\n");
+      }
+      throw new Error("Unknown log format");
+    },
   };
 }

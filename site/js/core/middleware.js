@@ -32,15 +32,34 @@ export function parseJsonBody(bodyText) {
   }
 }
 
+function matchesType(value, type) {
+  if (type === "string") return typeof value === "string";
+  if (type === "number") return typeof value === "number" && Number.isFinite(value);
+  if (type === "boolean") return typeof value === "boolean";
+  if (type === "array") return Array.isArray(value);
+  if (type === "object") return isPlainObject(value);
+  return false;
+}
+
+function ruleError(message) {
+  return { ok: false, error: { code: "VALIDATION_ERROR", message } };
+}
+
 export function validateRequest({ endpoint, body }) {
   const operation = endpoint?.handler?.type === "collection" ? endpoint.handler.operation : null;
   const writes = operation === "create" || operation === "replace" || operation === "update";
-  if (!writes) return { ok: true };
-  if (!isPlainObject(body)) {
-    return {
-      ok: false,
-      error: { code: "VALIDATION_ERROR", message: "JSON object body is required" },
-    };
+  if (writes && !isPlainObject(body)) {
+    return ruleError("JSON object body is required");
+  }
+  for (const rule of endpoint?.bodyRules || []) {
+    const present = isPlainObject(body) && Object.hasOwn(body, rule.field);
+    if (!present) {
+      if (rule.required) return ruleError(`Field ${rule.field} is required`);
+      continue;
+    }
+    if (!matchesType(body[rule.field], rule.type)) {
+      return ruleError(`Field ${rule.field} must be a ${rule.type}`);
+    }
   }
   return { ok: true };
 }

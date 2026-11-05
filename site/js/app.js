@@ -1,5 +1,6 @@
 import { createMockEngine } from "./core/mock-engine.js";
 import { createLogger } from "./core/logger.js";
+import { createRequestHistory } from "./core/request-history.js";
 import { resolveRoute, startRouter } from "./core/router.js";
 import { sampleWorkspace } from "./fixtures/sample-workspace.js";
 import { createCollectionsView } from "./modules/collections.js";
@@ -11,9 +12,11 @@ import { createTesterView } from "./modules/tester.js";
 import { createCollectionService } from "./services/collection-service.js";
 import { createEndpointService } from "./services/endpoint-service.js";
 import { createImportExportService } from "./services/import-export-service.js";
+import { createPresetService } from "./services/preset-service.js";
 import { createStorageService } from "./services/storage-service.js";
 import { clear } from "./utils/dom.js";
 import { createId } from "./utils/id.js";
+import { matchShortcut } from "./utils/shortcuts.js";
 import { readTheme, SETTINGS_KEY, themeRecord } from "./utils/theme.js";
 import { nowMs, sleep } from "./utils/time.js";
 
@@ -30,7 +33,12 @@ const collectionService = createCollectionService({
   idGenerator: () => createId("col"),
 });
 const importExport = createImportExportService({ storageService, clock: nowMs });
+const presetService = createPresetService({
+  storageService,
+  idGenerator: () => createId("pre"),
+});
 const logger = createLogger({ clock: nowMs });
+const requestHistory = createRequestHistory();
 const engine = createMockEngine({
   endpointService,
   collectionService,
@@ -51,8 +59,10 @@ const deps = {
   endpointService,
   collectionService,
   importExport,
+  presetService,
   engine,
   logger,
+  requestHistory,
   sampleWorkspace,
   getBlockError: () => blockError,
   setBlockError(error) { blockError = error; },
@@ -128,6 +138,13 @@ function render(name) {
 
 toggle.addEventListener("click", () => {
   setMenu(!shell.classList.contains("nav-open"));
+});
+
+document.addEventListener("keydown", (event) => {
+  const route = matchShortcut(event);
+  if (!route) return;
+  event.preventDefault();
+  window.location.hash = `#/${route}`;
 });
 
 startRouter(render);

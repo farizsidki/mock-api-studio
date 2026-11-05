@@ -96,23 +96,55 @@ function normalizeHeaders(headers, code) {
   return normalized;
 }
 
+function normalizeStaticResponse(response, code) {
+  assertExactKeys(response, ["status", "headers", "body"], code, "Response");
+  if (!Number.isInteger(response.status) || response.status < 100 || response.status > 599) {
+    fail(code, "Status must be an integer from 100 to 599");
+  }
+  assertJsonValue(response.body, code);
+  return {
+    status: response.status,
+    headers: normalizeHeaders(response.headers, code),
+    body: cloneData(response.body),
+  };
+}
+
+function normalizeScenarios(scenarios, code) {
+  if (!Array.isArray(scenarios)) fail(code, "Scenarios must be an array");
+  if (scenarios.length > 8) fail(code, "Scenario limit is 8");
+  const ids = new Set();
+  return scenarios.map((scenario) => {
+    assertExactKeys(scenario, ["id", "name", "response"], code, "Scenario");
+    if (typeof scenario.id !== "string" || scenario.id.trim() === "") fail(code, "Scenario id is required");
+    if (ids.has(scenario.id)) fail(code, "Scenario ids must be unique");
+    ids.add(scenario.id);
+    if (typeof scenario.name !== "string" || scenario.name.trim() === "") fail(code, "Scenario name is required");
+    return {
+      id: scenario.id,
+      name: scenario.name.trim(),
+      response: normalizeStaticResponse(scenario.response, code),
+    };
+  });
+}
+
 function normalizeHandler(handler, method, path, collections, code) {
   if (!isPlainObject(handler)) fail(code, "Handler type is not supported");
   if (handler.type === "static") {
-    assertExactKeys(handler, ["type", "response"], code, "Handler");
-    assertExactKeys(handler.response, ["status", "headers", "body"], code, "Response");
-    if (!Number.isInteger(handler.response.status) || handler.response.status < 100 || handler.response.status > 599) {
-      fail(code, "Status must be an integer from 100 to 599");
+    const allowed = ["type", "response"];
+    if (handler.scenarios !== undefined) allowed.push("scenarios");
+    if (handler.activeScenarioId !== undefined) allowed.push("activeScenarioId");
+    assertExactKeys(handler, allowed, code, "Handler");
+    const response = normalizeStaticResponse(handler.response, code);
+    const scenarios = handler.scenarios === undefined ? undefined : normalizeScenarios(handler.scenarios, code);
+    if (handler.activeScenarioId != null && handler.activeScenarioId !== undefined) {
+      if (typeof handler.activeScenarioId !== "string" || !scenarios?.some((item) => item.id === handler.activeScenarioId)) {
+        fail(code, "Active scenario was not found");
+      }
     }
-    assertJsonValue(handler.response.body, code);
-    return {
-      type: "static",
-      response: {
-        status: handler.response.status,
-        headers: normalizeHeaders(handler.response.headers, code),
-        body: cloneData(handler.response.body),
-      },
-    };
+    const normalized = { type: "static", response };
+    if (scenarios) normalized.scenarios = scenarios;
+    if (handler.activeScenarioId) normalized.activeScenarioId = handler.activeScenarioId;
+    return normalized;
   }
   if (handler.type !== "collection") fail(code, "Handler type is not supported");
   assertExactKeys(handler, ["type", "collectionId", "operation"], code, "Handler");
@@ -137,6 +169,7 @@ function normalizeHandler(handler, method, path, collections, code) {
 export function validateEndpointInput(input, context, code = "VALIDATION_ERROR") {
   const allowed = ["name", "method", "path", "enabled", "delayMs", "handler"];
   if (input?.auth !== undefined) allowed.push("auth");
+  if (input?.bodyRules !== undefined) allowed.push("bodyRules");
   assertExactKeys(input, allowed, code, "Endpoint");
   if (typeof input.name !== "string" || input.name.trim() === "") fail(code, "Name is required");
   if (!HTTP_METHODS.includes(input.method)) fail(code, "Method is not supported");
@@ -148,13 +181,14 @@ export function validateEndpointInput(input, context, code = "VALIDATION_ERROR")
   }
   const handler = normalizeHandler(input.handler, input.method, inspected.path, context.collections, code);
   const auth = normalizeAuth(input.auth, code);
+  const bodyRules = input.bodyRules === undefined ? undefined : normalizeBodyRules(input.bodyRules, code);
   const conflict = context.endpoints.some((endpoint) => (
     endpoint.id !== context.ignoreId
     && endpoint.method === input.method
     && routesConflict(endpoint.path, inspected.path)
   ));
   if (conflict) fail(code, "Method and path conflict with an existing endpoint");
-  return {
+  const result = {
     name: input.name.trim(),
     method: input.method,
     path: inspected.path,
@@ -163,6 +197,26 @@ export function validateEndpointInput(input, context, code = "VALIDATION_ERROR")
     auth,
     handler,
   };
+  if (bodyRules) result.bodyRules = bodyRules;
+  return result;
+}
+
+function normalizeBodyRules(rules, code) {
+  if (!Array.isArray(rules)) fail(code, "Body rules must be an array");
+  if (rules.length > 20) fail(code, "Body rule limit is 20");
+  const types = new Set(["string", "number", "boolean", "object", "array"]);
+  const fields = new Set();
+  return rules.map((rule) => {
+    assertExactKeys(rule, ["field", "type", "required"], code, "Body rule");
+    if (typeof rule.field !== "string" || !/^[A-Za-z_][A-Za-z0-9_]*$/.test(rule.field)) {
+      fail(code, "Body rule field is invalid");
+    }
+    if (fields.has(rule.field)) fail(code, "Body rule fields must be unique");
+    fields.add(rule.field);
+    if (!types.has(rule.type)) fail(code, "Body rule type is not supported");
+    if (typeof rule.required !== "boolean") fail(code, "Body rule required must be boolean");
+    return { field: rule.field, type: rule.type, required: rule.required };
+  });
 }
 
 function idKey(id) {
@@ -253,6 +307,7 @@ function validateStoredEndpoints(endpoints, collections, code) {
   return endpoints.map((endpoint) => {
     const allowed = ["id", "name", "method", "path", "enabled", "delayMs", "handler"];
     if (endpoint?.auth !== undefined) allowed.push("auth");
+    if (endpoint?.bodyRules !== undefined) allowed.push("bodyRules");
     assertExactKeys(endpoint, allowed, code, "Endpoint");
     const id = validateIdentity(endpoint.id, code, "Endpoint");
     if (ids.has(id)) fail(code, "Endpoint ids must be unique");
@@ -262,18 +317,54 @@ function validateStoredEndpoints(endpoints, collections, code) {
   });
 }
 
+function normalizePreset(input, code) {
+  assertExactKeys(input, ["name", "method", "url", "headers", "bodyText"], code, "Preset");
+  if (typeof input.name !== "string" || input.name.trim() === "") fail(code, "Preset name is required");
+  if (!HTTP_METHODS.includes(input.method)) fail(code, "Method is not supported");
+  if (typeof input.url !== "string") fail(code, "Preset URL is required");
+  if (typeof input.bodyText !== "string") fail(code, "Preset body must be text");
+  return {
+    name: input.name.trim(),
+    method: input.method,
+    url: input.url,
+    headers: normalizeHeaders(input.headers, code),
+    bodyText: input.bodyText,
+  };
+}
+
+export function normalizePresetList(presets, code = "VALIDATION_ERROR") {
+  if (!Array.isArray(presets)) fail(code, "Presets must be an array");
+  if (presets.length > 50) fail(code, "Preset limit is 50");
+  const ids = new Set();
+  return presets.map((preset) => {
+    assertExactKeys(preset, ["id", "name", "method", "url", "headers", "bodyText"], code, "Preset");
+    const id = validateIdentity(preset.id, code, "Preset");
+    if (ids.has(id)) fail(code, "Preset ids must be unique");
+    ids.add(id);
+    return { id, ...normalizePreset(withoutId(preset), code) };
+  });
+}
+
+function readPresets(data, code) {
+  if (data.presets === undefined) return [];
+  return normalizePresetList(data.presets, code);
+}
+
 export function validateStoredWorkspace(data) {
-  assertExactKeys(data, ["schemaVersion", "endpoints", "collections"], "STORAGE_CORRUPT", "Workspace");
+  const allowed = ["schemaVersion", "endpoints", "collections"];
+  if (data.presets !== undefined) allowed.push("presets");
+  assertExactKeys(data, allowed, "STORAGE_CORRUPT", "Workspace");
   if (data.schemaVersion !== SCHEMA_VERSION) fail("STORAGE_CORRUPT", "Saved workspace version is not supported", 500);
   const collections = validateStoredCollections(data.collections, data.endpoints ?? [], "STORAGE_CORRUPT");
   const endpoints = validateStoredEndpoints(data.endpoints, collections, "STORAGE_CORRUPT");
-  return { schemaVersion: SCHEMA_VERSION, endpoints, collections };
+  return { schemaVersion: SCHEMA_VERSION, endpoints, collections, presets: readPresets(data, "STORAGE_CORRUPT") };
 }
 
 export function validateImportDocument(data) {
   if (!isPlainObject(data)) fail("IMPORT_INVALID", "Import file is not an object");
   const allowed = ["app", "schemaVersion", "endpoints", "collections"];
   if (data.exportedAt !== undefined) allowed.push("exportedAt");
+  if (data.presets !== undefined) allowed.push("presets");
   assertExactKeys(data, allowed, "IMPORT_INVALID", "Import");
   if (data.app !== APP_ID) fail("IMPORT_INVALID", "Import app id is not supported");
   if (data.schemaVersion !== SCHEMA_VERSION) fail("IMPORT_INVALID", "Import schema version is not supported");
@@ -282,5 +373,10 @@ export function validateImportDocument(data) {
   }
   const collections = validateStoredCollections(data.collections, data.endpoints ?? [], "IMPORT_INVALID");
   const endpoints = validateStoredEndpoints(data.endpoints, collections, "IMPORT_INVALID");
-  return { schemaVersion: SCHEMA_VERSION, endpoints, collections };
+  return {
+    schemaVersion: SCHEMA_VERSION,
+    endpoints,
+    collections,
+    presets: readPresets(data, "IMPORT_INVALID"),
+  };
 }

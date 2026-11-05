@@ -286,3 +286,38 @@ test("collection flow persists before delay and unexpected errors stay safe", as
   assert.equal(JSON.stringify(failed).includes("secret-stack"), false);
   assert.equal(sleeps.length >= 0, true);
 });
+
+test("unknown scenario id uses the default static body", async () => {
+  const { engine, endpointService } = setup();
+  endpointService.create(staticEndpoint({
+    path: "/scenario",
+    handler: {
+      type: "static",
+      response: { status: 200, headers: { "Content-Type": "application/json" }, body: { data: [] } },
+      scenarios: [
+        {
+          id: "empty",
+          name: "Empty",
+          response: { status: 200, headers: {}, body: { data: ["empty"] } },
+        },
+      ],
+    },
+  }));
+  const response = await engine.simulateRequest({
+    method: "GET",
+    url: "/scenario",
+    headers: {},
+    bodyText: "",
+    scenarioId: "missing",
+  });
+  assert.equal(response.status, 200);
+  assert.deepEqual(response.body, { data: [] });
+  const selected = await engine.simulateRequest({
+    method: "GET",
+    url: "/scenario",
+    headers: {},
+    bodyText: "",
+    scenarioId: "empty",
+  });
+  assert.deepEqual(selected.body, { data: ["empty"] });
+});

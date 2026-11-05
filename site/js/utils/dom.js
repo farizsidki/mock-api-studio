@@ -40,6 +40,45 @@ export function setAlert(node, message) {
   node.hidden = !message;
 }
 
+export function chooseDialog({ title, text, choices }) {
+  return new Promise((resolve) => {
+    const dialog = el("dialog", { attrs: { "aria-label": title } });
+    let picked = null;
+    const buttons = choices.map((choice) => {
+      const button = el("button", {
+        className: choice.primary ? "primary" : "",
+        text: choice.label,
+        attrs: { type: "button" },
+      });
+      button.addEventListener("click", () => {
+        picked = choice.value;
+        dialog.close();
+      });
+      return button;
+    });
+    const cancel = el("button", { text: "Cancel", attrs: { type: "button" } });
+    dialog.append(el("form", {
+      attrs: { method: "dialog" },
+      children: [
+        el("h2", { text: title }),
+        el("p", { text }),
+        el("div", { className: "actions", children: [...buttons, cancel] }),
+      ],
+    }));
+    cancel.addEventListener("click", () => dialog.close());
+    dialog.addEventListener("close", () => {
+      dialog.remove();
+      resolve(picked);
+    });
+    dialog.addEventListener("cancel", (event) => {
+      event.preventDefault();
+      dialog.close();
+    });
+    document.body.append(dialog);
+    dialog.showModal();
+  });
+}
+
 export function confirmDialog({ title, text, confirmLabel = "Confirm", cancelLabel = "Cancel" }) {
   return new Promise((resolve) => {
     const dialog = el("dialog", { attrs: { "aria-label": title } });
@@ -115,6 +154,12 @@ export function createHeaderFields(headers) {
         result[name] = value;
       }
       return result;
+    },
+    load(nextHeaders) {
+      box.replaceChildren();
+      const nextEntries = Object.entries(nextHeaders || {});
+      if (nextEntries.length === 0) add();
+      else nextEntries.forEach(([name, value]) => add(name, value));
     },
     clear() {
       box.replaceChildren();

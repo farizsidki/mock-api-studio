@@ -43,6 +43,29 @@ function invalid(message, request, started, clock) {
   };
 }
 
+function pickStaticResponse(handler, scenarioId) {
+  const scenarios = handler.scenarios || [];
+  if (scenarioId) {
+    const found = scenarios.find((item) => item.id === scenarioId);
+    if (found) return found.response;
+  }
+  if (handler.activeScenarioId) {
+    const active = scenarios.find((item) => item.id === handler.activeScenarioId);
+    if (active) return active.response;
+  }
+  return handler.response;
+}
+
+function staticResult(handler, scenarioId) {
+  const response = pickStaticResponse(handler, scenarioId);
+  return {
+    status: response.status,
+    headers: cloneData(response.headers),
+    body: cloneData(response.body),
+    error: null,
+  };
+}
+
 export function createMockEngine({ endpointService, collectionService, logger, sleep, clock }) {
   async function finish(outcome, started) {
     const response = outcome.response ?? outcome;
@@ -196,12 +219,7 @@ export function createMockEngine({ endpointService, collectionService, logger, s
     let handlerResult;
     try {
       handlerResult = endpoint.handler.type === "static"
-        ? {
-          status: endpoint.handler.response.status,
-          headers: cloneData(endpoint.handler.response.headers),
-          body: cloneData(endpoint.handler.response.body),
-          error: null,
-        }
+        ? staticResult(endpoint.handler, request.scenarioId)
         : collectionService.execute({
           collectionId: endpoint.handler.collectionId,
           operation: endpoint.handler.operation,

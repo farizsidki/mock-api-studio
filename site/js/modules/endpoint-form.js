@@ -12,6 +12,28 @@ function input(value, attrs = {}) {
   return el("input", { attrs: { ...attrs, value: value ?? "" } });
 }
 
+export function appendScenario(scenarios, draft) {
+  if (scenarios.length >= 8) throw new Error("Scenario limit is 8");
+  const raw = String(draft.bodyText ?? "").trim();
+  return [...scenarios, {
+    id: draft.id,
+    name: String(draft.name ?? "").trim() || "Scenario",
+    response: {
+      status: draft.status,
+      headers: draft.headers,
+      body: raw ? JSON.parse(raw) : null,
+    },
+  }];
+}
+
+export function withoutId(items, id) {
+  return items.filter((item) => item.id !== id);
+}
+
+export function withoutField(rules, fieldName) {
+  return rules.filter((rule) => rule.field !== fieldName);
+}
+
 export function createEndpointForm({ collections, initial, onSave, onCancel }) {
   const current = initial ?? {
     name: "",
@@ -65,7 +87,60 @@ export function createEndpointForm({ collections, initial, onSave, onCancel }) {
     }));
   }
   const operation = el("select");
-  const staticBox = el("div", { children: [field("Status", status), field("Headers", headers.box), el("button", { text: "Add header", attrs: { type: "button" }, on: { click: () => headers.add() } }), field("JSON body", body)] });
+  let scenarios = [...(current.handler?.scenarios || [])];
+  let activeScenarioId = current.handler?.activeScenarioId || "";
+  const scenarioName = input("");
+  const activeScenario = el("select");
+  const scenarioList = el("div", { className: "list" });
+  function paintScenarios() {
+    activeScenario.replaceChildren(el("option", { text: "No active scenario", attrs: { value: "" } }));
+    scenarioList.replaceChildren();
+    for (const scenario of scenarios) {
+      activeScenario.append(el("option", {
+        text: scenario.name,
+        attrs: { value: scenario.id, selected: scenario.id === activeScenarioId },
+      }));
+      scenarioList.append(el("div", { className: "header-row", children: [
+        el("span", { text: scenario.name }),
+        el("button", {
+          text: "Remove scenario",
+          attrs: { type: "button" },
+          on: { click: () => {
+            scenarios = withoutId(scenarios, scenario.id);
+            if (activeScenarioId === scenario.id) activeScenarioId = "";
+            paintScenarios();
+          } },
+        }),
+      ] }));
+    }
+  }
+  paintScenarios();
+  activeScenario.addEventListener("change", () => { activeScenarioId = activeScenario.value; });
+  const staticBox = el("div", { children: [
+    field("Status", status),
+    field("Headers", headers.box),
+    el("button", { text: "Add header", attrs: { type: "button" }, on: { click: () => headers.add() } }),
+    field("JSON body", body),
+    field("Scenario name", scenarioName),
+    el("button", { text: "Add scenario", attrs: { type: "button" }, on: { click: () => {
+      try {
+        scenarios = appendScenario(scenarios, {
+          id: `sc_${crypto.randomUUID()}`,
+          name: scenarioName.value,
+          status: Number(status.value),
+          headers: headers.read(),
+          bodyText: body.value,
+        });
+        scenarioName.value = "";
+        setAlert(alert, "");
+        paintScenarios();
+      } catch (error) {
+        setAlert(alert, error instanceof SyntaxError ? "Scenario body is not valid JSON" : (error.message || "Scenario could not be added"));
+      }
+    } } }),
+    scenarioList,
+    field("Active scenario", activeScenario),
+  ] });
   const collectionBox = el("div", { children: [field("Collection", collectionSelect), field("Operation", operation)] });
 
   function syncOperations() {
@@ -86,6 +161,38 @@ export function createEndpointForm({ collections, initial, onSave, onCancel }) {
   syncOperations();
   syncHandler();
 
+  let bodyRules = [...(current.bodyRules || [])];
+  const ruleField = input("");
+  const ruleType = el("select");
+  for (const item of ["string", "number", "boolean", "object", "array"]) {
+    ruleType.append(el("option", { text: item, attrs: { value: item } }));
+  }
+  const ruleRequired = el("input", { attrs: { type: "checkbox" } });
+  const ruleList = el("div", { className: "list" });
+  function paintRules() {
+    ruleList.replaceChildren();
+    for (const rule of bodyRules) {
+      ruleList.append(el("div", { className: "header-row", children: [
+        el("span", { text: `${rule.field}:${rule.type}${rule.required ? "*" : ""}` }),
+        el("button", {
+          text: "Remove rule",
+          attrs: { type: "button" },
+          on: { click: () => {
+            bodyRules = withoutField(bodyRules, rule.field);
+            paintRules();
+          } },
+        }),
+      ] }));
+    }
+  }
+  paintRules();
+  const addRule = el("button", { text: "Add body rule", attrs: { type: "button" }, on: { click: () => {
+    if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(ruleField.value) || bodyRules.length >= 20) return;
+    bodyRules = [...bodyRules, { field: ruleField.value, type: ruleType.value, required: ruleRequired.checked }];
+    ruleField.value = "";
+    paintRules();
+  } } });
+
   const form = el("form", {
     className: "panel",
     children: [
@@ -102,6 +209,11 @@ export function createEndpointForm({ collections, initial, onSave, onCancel }) {
       field("Handler", handlerType),
       staticBox,
       collectionBox,
+      el("h3", { text: "Body rules" }),
+      el("div", { className: "grid-2", children: [field("Field", ruleField), field("Type", ruleType)] }),
+      field("Required", ruleRequired),
+      addRule,
+      ruleList,
       el("div", { className: "actions", children: [
         el("button", { className: "primary", text: "Save endpoint", attrs: { type: "submit" } }),
         el("button", { text: "Cancel", attrs: { type: "button" }, on: { click: () => onCancel() } }),
@@ -123,6 +235,10 @@ export function createEndpointForm({ collections, initial, onSave, onCancel }) {
             body: raw ? JSON.parse(raw) : null,
           },
         };
+        if (scenarios.length > 0) {
+          handler.scenarios = scenarios;
+          if (activeScenarioId) handler.activeScenarioId = activeScenarioId;
+        }
       } else {
         if (!collectionSelect.value) throw new Error("Create a collection first");
         handler = {
@@ -131,7 +247,7 @@ export function createEndpointForm({ collections, initial, onSave, onCancel }) {
           operation: operation.value,
         };
       }
-      onSave({
+      const saved = {
         name: name.value,
         method: method.value,
         path: path.value,
@@ -144,7 +260,9 @@ export function createEndpointForm({ collections, initial, onSave, onCancel }) {
           expectedValue: expected.value,
         },
         handler,
-      });
+      };
+      if (bodyRules.length > 0) saved.bodyRules = bodyRules;
+      onSave(saved);
     } catch (error) {
       setAlert(alert, error.message || "Endpoint could not be saved");
     }

@@ -1,6 +1,14 @@
-import { confirmDialog, el, setAlert, statusTone } from "../utils/dom.js";
+import { chooseDialog, confirmDialog, el, setAlert, statusTone } from "../utils/dom.js";
 import { prettyJson } from "../utils/json.js";
 import { IMPORT_MAX_BYTES } from "../utils/validation.js";
+
+export const resetConfirmText = "Remove saved endpoints, collections, and presets from this browser?";
+
+export function resolveImportAction(choice, confirmed) {
+  if (choice !== "replace" && choice !== "merge") return null;
+  if (!confirmed) return null;
+  return choice;
+}
 
 export function createDashboardView(deps) {
   return {
@@ -133,13 +141,23 @@ async function importFile(deps, fileInput, alert) {
       setAlert(alert, preview.errors.map((error) => error.message).join(" "));
       return;
     }
-    const yes = await confirmDialog({
-      title: "Replace workspace",
-      text: `Import ${preview.summary.endpoints} endpoints and ${preview.summary.collections} collections.`,
-      confirmLabel: "Replace",
+    const summary = `Import ${preview.summary.endpoints} endpoints, ${preview.summary.collections} collections, and ${preview.summary.presets} presets.`;
+    const choice = await chooseDialog({
+      title: "Import workspace",
+      text: summary,
+      choices: [
+        { label: "Replace", value: "replace", primary: true },
+        { label: "Merge", value: "merge" },
+      ],
     });
-    if (!yes) return;
-    deps.importExport.importWorkspace(text, { strategy: "replace" });
+    const confirmed = choice ? await confirmDialog({
+      title: choice === "merge" ? "Merge workspace" : "Replace workspace",
+      text: choice === "merge" ? "Keep current ids and update matches from the file?" : summary,
+      confirmLabel: choice === "merge" ? "Merge" : "Replace",
+    }) : false;
+    const strategy = resolveImportAction(choice, confirmed);
+    if (!strategy) return;
+    deps.importExport.importWorkspace(text, { strategy });
     deps.setBlockError(null);
     deps.remount();
   } catch (error) {
@@ -150,7 +168,7 @@ async function importFile(deps, fileInput, alert) {
 async function resetWorkspace(deps, alert) {
   const yes = await confirmDialog({
     title: "Reset workspace",
-    text: "Remove saved endpoints and collections from this browser?",
+    text: resetConfirmText,
     confirmLabel: "Reset",
   });
   if (!yes) return;

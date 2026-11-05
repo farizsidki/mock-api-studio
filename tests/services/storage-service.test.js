@@ -23,6 +23,7 @@ test("missing storage loads an empty workspace", () => {
     schemaVersion: 1,
     endpoints: [],
     collections: [],
+    presets: [],
   });
 });
 

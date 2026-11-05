@@ -52,6 +52,22 @@ test("endpoint crud preserves ids and rejects duplicates", () => {
   assert.throws(() => service.getById("missing"), (error) => error.code === "NOT_FOUND");
 });
 
+test("duplicate avoids existing method and path", () => {
+  const { service } = setup();
+  const created = service.create(input());
+  service.create(input({ name: "Get", path: "/users/:id" }));
+  const first = service.duplicate(created.id);
+  const second = service.duplicate(created.id);
+  const dynamic = service.duplicate(service.list().find((item) => item.path === "/users/:id").id);
+  assert.equal(first.path, "/users-copy");
+  assert.equal(first.name, "List copy");
+  assert.notEqual(first.id, created.id);
+  assert.equal(second.path, "/users-copy-2");
+  assert.equal(dynamic.path, "/users-copy/:id");
+  assert.equal(service.getById(created.id).path, "/users");
+  assert.throws(() => service.duplicate("missing"), (error) => error.code === "NOT_FOUND");
+});
+
 test("returned endpoints are copies", () => {
   const { service } = setup();
   const created = service.create(input());
