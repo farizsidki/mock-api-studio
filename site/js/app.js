@@ -14,6 +14,7 @@ import { createImportExportService } from "./services/import-export-service.js";
 import { createStorageService } from "./services/storage-service.js";
 import { clear } from "./utils/dom.js";
 import { createId } from "./utils/id.js";
+import { readTheme, SETTINGS_KEY, themeRecord } from "./utils/theme.js";
 import { nowMs, sleep } from "./utils/time.js";
 
 const storageService = createStorageService({
@@ -71,13 +72,45 @@ const main = document.querySelector("#main");
 const nav = document.querySelector("#site-nav");
 const shell = document.querySelector(".shell");
 const toggle = document.querySelector(".nav-toggle");
+const themeToggle = document.querySelector("#theme-toggle");
 let current = null;
+
+function applyTheme(theme) {
+  document.documentElement.dataset.theme = theme;
+  document.documentElement.style.colorScheme = theme;
+  const active = theme === "light" ? "Light" : "Dark";
+  themeToggle.textContent = active;
+  themeToggle.setAttribute("aria-label", `${active} theme`);
+}
+
+function setMenu(open) {
+  shell.classList.toggle("nav-open", open);
+  toggle.setAttribute("aria-expanded", String(open));
+  toggle.textContent = open ? "Close" : "Menu";
+}
+
+let savedTheme = null;
+try {
+  savedTheme = localStorage.getItem(SETTINGS_KEY);
+} catch {
+  savedTheme = null;
+}
+applyTheme(readTheme(savedTheme, window.matchMedia("(prefers-color-scheme: light)").matches));
+
+themeToggle.addEventListener("click", () => {
+  const theme = document.documentElement.dataset.theme === "light" ? "dark" : "light";
+  applyTheme(theme);
+  try {
+    localStorage.setItem(SETTINGS_KEY, themeRecord(theme));
+  } catch {
+    // The chosen colors stay for this view even when settings cannot be stored.
+  }
+});
 
 function render(name) {
   if (current) current.unmount();
   clear(main);
-  shell.classList.remove("nav-open");
-  toggle.setAttribute("aria-expanded", "false");
+  setMenu(false);
   try {
     storageService.loadWorkspace();
     blockError = null;
@@ -90,12 +123,11 @@ function render(name) {
   }
   current = views[name];
   current.mount(main);
-  main.focus();
+  main.focus({ preventScroll: true });
 }
 
 toggle.addEventListener("click", () => {
-  const open = shell.classList.toggle("nav-open");
-  toggle.setAttribute("aria-expanded", String(open));
+  setMenu(!shell.classList.contains("nav-open"));
 });
 
 startRouter(render);

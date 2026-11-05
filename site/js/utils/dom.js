@@ -80,7 +80,7 @@ export function createHeaderFields(headers) {
     const nameInput = el("input", { attrs: { type: "text", value: name } });
     const valueInput = el("input", { attrs: { type: "text", value } });
     const row = el("div", {
-      className: "grid-2",
+      className: "header-row",
       children: [
         nameInput,
         valueInput,
@@ -104,7 +104,7 @@ export function createHeaderFields(headers) {
     read() {
       const result = {};
       const seen = new Set();
-      for (const row of box.querySelectorAll(".grid-2")) {
+      for (const row of box.querySelectorAll(".header-row")) {
         const name = row.nameInput.value.trim();
         const value = row.valueInput.value;
         if (!name && !value) continue;

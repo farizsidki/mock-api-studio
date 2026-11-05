@@ -2,17 +2,45 @@
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: 12px;
-  padding: 1rem;
+  padding: 1rem 1.1rem;
   margin-bottom: 1rem;
+}
+
+.panel h2 { font-size: 1.05rem; margin-bottom: 0.35rem; }
+
+.panel h3 { font-size: 0.92rem; margin: 0.9rem 0 0.35rem; }
+
+main > .actions {
+  margin: 0 0 1rem;
+  padding: 0.7rem;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
 }
 
 .stats {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr));
   gap: 0.75rem;
+  margin-bottom: 1rem;
 }
 
-.stat strong { display: block; font-size: 1.5rem; }
+.stat {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 0.9rem 1rem;
+}
+
+.stat .muted {
+  display: block;
+  margin: 0;
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.stat strong { display: block; font-size: 1.6rem; line-height: 1.2; }
 
 .row, .actions { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
 
@@ -21,16 +49,23 @@ button, .button {
   color: var(--text);
   border: 1px solid var(--line);
   border-radius: 8px;
-  padding: 0.45rem 0.75rem;
+  min-height: 2.4rem;
+  padding: 0.4rem 0.8rem;
   font: inherit;
   cursor: pointer;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
+
+button:hover, .button:hover { border-color: var(--accent); }
 
 button.primary { background: var(--accent); color: var(--accent-ink); border-color: transparent; }
 
-button.danger { border-color: var(--danger); color: var(--danger); }
+button.danger { border-color: var(--danger); color: var(--danger); background: transparent; }
 
-label { display: block; font-size: 0.92rem; margin-bottom: 0.25rem; }
+label { display: block; font-size: 0.92rem; margin-bottom: 0.3rem; }
 
 label.button {
   display: inline-flex;
@@ -56,17 +91,53 @@ input, select, textarea {
   color: var(--text);
   border: 1px solid var(--line);
   border-radius: 8px;
-  padding: 0.45rem 0.6rem;
+  min-height: 2.4rem;
+  padding: 0.45rem 0.65rem;
   font: inherit;
 }
 
-textarea { min-height: 7rem; font-family: var(--mono); }
+textarea {
+  min-height: 8rem;
+  font-family: var(--mono);
+  resize: vertical;
+}
 
-.field { margin-bottom: 0.75rem; }
+.field { margin-bottom: 0.85rem; }
 
-.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+.field:has(input[type="checkbox"]) {
+  display: flex;
+  flex-direction: row-reverse;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 0.55rem;
+}
 
-.alert { color: var(--danger); }
+.field:has(input[type="checkbox"]) label { margin: 0; }
+
+.field:has(input[type="checkbox"]) input { width: 1.1rem; min-height: 1.1rem; }
+
+.grid-2 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
+  gap: 0.75rem;
+}
+
+.header-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 10rem), 1fr));
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.alert {
+  color: var(--danger);
+  background: var(--surface);
+  border: 1px solid var(--danger);
+  border-radius: 8px;
+  padding: 0.55rem 0.7rem;
+}
+
+.alert[hidden] { display: none; }
 
 .banner { border-color: var(--warn); }
 
@@ -80,8 +151,9 @@ textarea { min-height: 7rem; font-family: var(--mono); }
   display: inline-block;
   border: 1px solid var(--line);
   border-radius: 999px;
-  padding: 0.1rem 0.5rem;
+  padding: 0.1rem 0.55rem;
   font-family: var(--mono);
+  font-size: 0.85rem;
 }
 
 .status[data-tone="ok"] { color: var(--ok); border-color: var(--ok); }
@@ -90,21 +162,32 @@ textarea { min-height: 7rem; font-family: var(--mono); }
 
 .is-hidden { display: none; }
 
+main :has(> table) { overflow-x: auto; }
+
 table { width: 100%; border-collapse: collapse; }
 
 th, td {
   text-align: left;
   border-bottom: 1px solid var(--line);
-  padding: 0.4rem;
+  padding: 0.55rem 0.4rem;
   vertical-align: top;
 }
 
+th { color: var(--muted); font-size: 0.82rem; font-weight: 650; }
+
 dialog {
-  width: min(32rem, calc(100% - 2rem));
+  width: min(28rem, calc(100% - 2rem));
   background: var(--surface);
   color: var(--text);
   border: 1px solid var(--line);
   border-radius: 12px;
+  padding: 1.1rem 1.2rem;
 }
 
-dialog::backdrop { background: rgb(0 0 0 / 65%); }
+dialog form { display: grid; gap: 0.75rem; }
+
+dialog::backdrop { background: rgb(0 0 0 / 55%); }
+
+ul { margin: 0; padding-left: 1.2rem; }
+
+li { margin: 0.35rem 0; }

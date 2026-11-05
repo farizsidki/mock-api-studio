@@ -1,12 +1,21 @@
-@media (max-width: 800px) {
+@media (max-width: 960px) {
   .shell { grid-template-columns: 1fr; }
-  .nav-toggle { display: inline-block; }
+  .nav-toggle { display: inline-flex; }
   nav {
     display: none;
+    position: static;
     border-right: 0;
     border-bottom: 1px solid var(--line);
   }
-  .shell.nav-open nav { display: flex; }
-  .stats, .grid-2 { grid-template-columns: 1fr; }
-  main { padding: 1rem; }
+  .shell.nav-open nav {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 9rem), 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .item-head { flex-direction: column; }
+  .item-head .actions { width: 100%; }
+  .topbar { align-items: flex-start; }
+  .tagline { font-size: 0.8rem; }
 }

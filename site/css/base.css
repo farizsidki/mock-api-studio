@@ -9,6 +9,8 @@ body {
 
 h1, h2, h3, p { margin: 0 0 0.75rem; }
 
+h1 { font-size: clamp(1.35rem, 1.2rem + 1.1vw, 1.75rem); letter-spacing: -0.02em; }
+
 a { color: var(--accent); }
 
 :focus-visible {
@@ -18,12 +20,13 @@ a { color: var(--accent); }
 
 .skip-link {
   position: absolute;
-  left: 0.5rem;
+  left: 0.75rem;
   top: -4rem;
   background: var(--accent);
   color: var(--accent-ink);
   padding: 0.4rem 0.7rem;
-  z-index: 3;
+  border-radius: 8px;
+  z-index: 5;
 }
 
 .skip-link:focus { top: 0.5rem; }
@@ -32,6 +35,11 @@ code, pre, .mono { font-family: var(--mono); }
 
 pre {
   white-space: pre-wrap;
-  overflow-wrap: anywhere;
+  overflow: auto;
+  max-height: 22rem;
   margin: 0;
+  padding: 0.75rem;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 8px;
 }

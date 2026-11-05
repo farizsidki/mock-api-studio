@@ -64,7 +64,7 @@ export function createDashboardView(deps) {
 }
 
 function stat(label, value) {
-  return el("article", { className: "panel stat", children: [el("span", { className: "muted", text: label }), el("strong", { text: String(value) })] });
+  return el("article", { className: "stat", children: [el("span", { className: "muted", text: label }), el("strong", { text: String(value) })] });
 }
 
 function recovery(deps, alert) {

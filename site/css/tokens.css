@@ -1,17 +1,38 @@
-:root {
+:root,
+[data-theme="dark"] {
   color-scheme: dark;
-  --bg: #12161c;
-  --surface: #1c232d;
-  --surface-2: #252e3a;
-  --text: #e8eef6;
-  --muted: #c5d0db;
-  --line: #3a4856;
-  --accent: #e0b15a;
-  --accent-ink: #1d1608;
-  --ok: #8fd6ae;
-  --warn: #f0c36a;
-  --danger: #ffb4ab;
-  --focus: #f2c14e;
+  --bg: #0c1017;
+  --surface: #151b26;
+  --surface-2: #1e2836;
+  --text: #e8eef8;
+  --muted: #a9b8c9;
+  --line: #2c3a4d;
+  --accent: #5b9dff;
+  --accent-ink: #041018;
+  --accent-soft: #17304f;
+  --ok: #3dcca0;
+  --warn: #e2b15a;
+  --danger: #ff8f96;
+  --focus: #8cbcff;
+  --mono: ui-monospace, "Cascadia Code", "Segoe UI Mono", Consolas, monospace;
+  --sans: system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+[data-theme="light"] {
+  color-scheme: light;
+  --bg: #f4f7fb;
+  --surface: #ffffff;
+  --surface-2: #e7eef8;
+  --text: #121826;
+  --muted: #44566c;
+  --line: #d3deea;
+  --accent: #1d6fe8;
+  --accent-ink: #ffffff;
+  --accent-soft: #e5f0ff;
+  --ok: #0d7a4a;
+  --warn: #8a5a00;
+  --danger: #c43232;
+  --focus: #1d6fe8;
   --mono: ui-monospace, "Cascadia Code", "Segoe UI Mono", Consolas, monospace;
   --sans: system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }

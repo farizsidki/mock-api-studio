@@ -66,7 +66,7 @@ Query duplikat mengikuti `URLSearchParams`: `get` mengembalikan nilai pertama da
 
 ## Peta jalan
 
-Belum masuk MVP: pencarian endpoint, duplikasi, riwayat request, skenario response, validasi schema yang lebih kaya, merge import, dan tema terang.
+Belum masuk MVP: pencarian endpoint, duplikasi, riwayat request, skenario response, validasi schema yang lebih kaya, dan merge import. Tema terang dan gelap ada di header dan tersimpan di browser.
 
 ## Lisensi
 # MIT License

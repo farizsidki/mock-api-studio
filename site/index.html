@@ -3,8 +3,21 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="color-scheme" content="dark">
     <meta name="description" content="Browser-based API simulator. Not a backend server.">
+    <script>
+      (function () {
+        var theme = "dark";
+        try {
+          var saved = JSON.parse(localStorage.getItem("mockApiStudio:settings:v1")).theme;
+          if (saved === "light" || saved === "dark") theme = saved;
+          else if (matchMedia("(prefers-color-scheme: light)").matches) theme = "light";
+        } catch (error) {
+          if (matchMedia("(prefers-color-scheme: light)").matches) theme = "light";
+        }
+        document.documentElement.dataset.theme = theme;
+        document.documentElement.style.colorScheme = theme;
+      })();
+    </script>
     <title>Mock API Studio</title>
     <link rel="stylesheet" href="./css/tokens.css">
     <link rel="stylesheet" href="./css/base.css">
@@ -20,7 +33,10 @@
           <p class="brand">Mock API Studio</p>
           <p class="tagline">Browser-based API simulator. Not a backend server.</p>
         </div>
-        <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-nav">Menu</button>
+        <div class="top-actions">
+          <button id="theme-toggle" type="button" aria-label="Dark theme">Dark</button>
+          <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-nav">Menu</button>
+        </div>
       </header>
       <div class="shell">
         <nav id="site-nav" aria-label="Main">
@@ -33,6 +49,9 @@
         </nav>
         <main id="main" tabindex="-1"></main>
       </div>
+      <footer class="site-footer">
+        <p>Copyright (c) 2026 farizsidki</p>
+      </footer>
     </div>
     <script type="module" src="./js/app.js"></script>
   </body>
